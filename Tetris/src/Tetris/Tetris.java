@@ -9,7 +9,7 @@ import java.util.Random;
 public class Tetris extends JFrame implements KeyListener {
     //游戏的行数26和列数12
     private static final int game_x = 26;//final关键字代表这个变量只被赋值一次
-    private static final int game_y = 12;
+    private static final int game_y = 13;
     //文本域数组
     JTextArea[][] text;
     //二维矩阵，存储有没有方块
@@ -29,6 +29,8 @@ public class Tetris extends JFrame implements KeyListener {
     int time=1000;
     //得分
     int score=0;
+    boolean game_pause=false;
+    int pause_times=0;
     public void initWindow(){
         //设置窗口大小
         this.setSize(600,850);
@@ -69,6 +71,18 @@ public class Tetris extends JFrame implements KeyListener {
         this.add(game_main,BorderLayout.CENTER);
     }
 
+    //设置label样式
+    public JLabel setMyLabel(String text){
+        JLabel L1=new JLabel();
+
+        L1.setSize(50,20);
+        L1.setText(text);
+        L1.setLayout(new FlowLayout());
+        L1.setBorder(BorderFactory.createLineBorder(Color.yellow));
+        L1.setBounds(80, 80, 166, 86);
+        L1.setFont(new Font("宋体",Font.BOLD, 16));
+        return L1;
+    }
     //初始化游戏的说明面板
     public void initExplainPanel() {
         //添加左右控制面板并且初始化
@@ -77,10 +91,10 @@ public class Tetris extends JFrame implements KeyListener {
         explain_left.setLayout(new GridLayout(4,1));
         explain_right.setLayout(new GridLayout(2,1));
         //添加说明文字
-        explain_left.add(new JLabel("按空格键，方块变形"));
-        explain_left.add(new JLabel("按左方向键，方块左移"));
-        explain_left.add(new JLabel("按右方向键，方块右移"));
-        explain_left.add(new JLabel("按下方向键，方块下落"));
+        explain_left.add(setMyLabel("  ▭空格旋转"));
+        explain_left.add(setMyLabel("  ← →控制移动"));
+        explain_left.add(setMyLabel("  ↓ 控制下落"));
+        explain_left.add(setMyLabel(" 开始游戏吧！"));
         //设置标签内容颜色
         label1.setForeground(Color.red);
         //添加游戏状态、游戏分数到右说明面板
@@ -95,8 +109,16 @@ public class Tetris extends JFrame implements KeyListener {
         text = new JTextArea[game_x][game_y];
         data = new int[game_x][game_y];
         //初始化状态和分数标签
-        label1=new JLabel("游戏状态：游戏中...");
-        label = new JLabel("游戏得分：0 分");
+        label1=new JLabel("游戏中...");
+        label1.setLayout(new FlowLayout());
+        label1.setBorder(BorderFactory.createLineBorder(Color.yellow));
+        label1.setBounds(80, 80, 166, 86);
+        label1.setFont(new Font("宋体",Font.BOLD, 16));
+        label = new JLabel("Score：0 分");
+        label.setLayout(new FlowLayout());
+        label.setBorder(BorderFactory.createLineBorder(Color.yellow));
+        label.setBounds(80, 80, 166, 86);
+        label.setFont(new Font("宋体",Font.BOLD, 16));
         initGamePanel();
         initExplainPanel();
         initWindow();
@@ -113,16 +135,12 @@ public class Tetris extends JFrame implements KeyListener {
 
     public void game_begin()
     {
-        while(true)
+        while(isRunning)
         {
-            if(!isRunning)//不跑了
-            {
-                break;
-            }
             //让游戏继续进行
             game_run();
         }
-        label1.setText("游戏状态：游戏结束");//更改游戏状态
+        label1.setText("游戏结束");//更改游戏状态
     }
     //随机生成下落方块的方法
     public void randomRect(){
@@ -135,47 +153,55 @@ public class Tetris extends JFrame implements KeyListener {
         randomRect();
         x=0;
         y=5;
-        for(int i=0;i<game_x;i++)
+        for(int i=0;i<game_x;)
         {
             try{
                 Thread.sleep(time);
                 //如果方块还可以下落
-                if(canFall(x,y))
+                if(game_pause)
                 {
-                    //层数++
-                    x++;
-                    fall(x,y);
+                    //啥也不干
                 }
                 else
                 {
-                    //将data置为1
-                    changeData(x,y);
-                    //循环遍历4层，看是否可以消除行
-                    for(int j=x;j<x+4;j++)
+                    if(canFall(x,y))
                     {
-                        int sum=0;//统计有多少列有方块
-                        for(int k=1;k<game_y-1;k++)
-                        {
-                            if(data[j][k]==1)
-                                sum++;
-                        }
-                        //判断是否有一行可以消除
-                        if(sum==game_y-2)
-                        {
-                            //消除这一行
-                            removeRow(j);
-                        }
+                        //层数++
+                        x++;
+                        fall(x,y);
                     }
-                    //判断是否失败
-                    for(int j=1;j<game_y-1;j++)
+                    else
                     {
-                        if(data[3][j]==1)
+                        //将data置为1
+                        changeData(x,y);
+                        //循环遍历4层，看是否可以消除行
+                        for(int j=x;j<x+4;j++)
                         {
-                            isRunning=false;
-                            break;
+                            int sum=0;//统计有多少列有方块
+                            for(int k=1;k<game_y-1;k++)
+                            {
+                                if(data[j][k]==1)
+                                    sum++;
+                            }
+                            //判断是否有一行可以消除
+                            if(sum==game_y-2)
+                            {
+                                //消除这一行
+                                removeRow(j);
+                            }
                         }
+                        //判断是否失败
+                        for(int j=1;j<game_y-1;j++)
+                        {
+                            if(data[3][j]==1)
+                            {
+                                isRunning=false;
+                                break;
+                            }
+                        }
+                        break;
                     }
-                    break;
+                    i++;
                 }
             }
             catch (InterruptedException e) {
@@ -231,19 +257,22 @@ public class Tetris extends JFrame implements KeyListener {
     public void removeRow(int row)
     {
         int temp=100;
-        for(int i=row;i>=1;i--)
+        for(int i=row;i>=2;i--)
         {
-            for(int j=1;i<=game_y-2;j++)
+            for(int j=1;j<game_y-2;j++)
             {
                 //覆盖
                 data[i][j]=data[i-1][j];
+                System.out.println("i="+i+"  ");
+                System.out.println("j="+j+"\n");
+
             }
         }
         //刷新游戏区域
         reflesh(row);
 
         //方块加速
-        if(time>temp)
+        if(time>temp&&time>=300)
         {
             time-=temp;
         }
@@ -257,7 +286,7 @@ public class Tetris extends JFrame implements KeyListener {
     {
         for(int i=row;i>=1;i--)
         {
-            for(int j=0;j<=game_y-2;j++)
+            for(int j=1;j<=game_y-2;j++)
             {
                 if(data[i][j]==1)//是否是方块
                 {
@@ -321,11 +350,97 @@ public class Tetris extends JFrame implements KeyListener {
             n-=4;
         }
     }
-//
+
 
     @Override
     public void keyTyped(KeyEvent e) {
-
+        //暂停
+        if(e.getKeyChar()=='s')
+        {
+            if(isRunning==false)
+                return;
+            else{
+                pause_times++;
+                if(pause_times==1){
+                    game_pause=true;
+                    label1.setText("暂停中...");
+                }
+                else if(pause_times==2){
+                    game_pause=false;
+                    pause_times=0;
+                    label1.setText("游戏中...");
+                }
+            }
+        }
+        if(e.getKeyChar()==KeyEvent.VK_SPACE){
+            if(isRunning)
+            {
+                int old;//当前方块
+                for(old=0;old<allRect.length;old++)
+                {
+                    if(rect==allRect[old])
+                        break;//获取当前方块的索引
+                }
+                //定义一个变量，存储变形后的方块
+                int next=0;
+                if(old==0||old==7||old==8||old==9)//中心对称图形
+                    return;
+                //清楚当前方块
+                clear(x,y);
+                //重画
+                if(old==1||old==2){//4横杠和4竖线
+                    next=allRect[old==1?2:1];
+                }
+                else if(old>=3&&old<=6){//大L形状，四个顺次倒腾
+                    next=allRect[3+(old-2)%4];
+                }
+                else if(old==10||old==11){//3横杠和3竖线
+                    next=allRect[old==10?11:10];
+                }
+                else if(old==12||old==13){//2横杠和2竖线
+                    next=allRect[old==12?13:12];
+                }
+                else if(old>=14&&old<=17){//长得像土的那个
+                    next=allRect[14+(old+1)%4];
+                }
+                else if(old==18||old==19){//z字形
+                    next=allRect[old==18?19:18];
+                }else if(old==20||old==21){//另一个z字形
+                    next=allRect[old==20?21:20];
+                }
+                if(canTurn(next,x,y)){//判断碰没碰到墙
+                    rect=next;
+                }
+                draw(x,y);
+            }else
+            {
+                return;
+            }
+        }
+    }
+    //判断方块是否可以变形
+    public boolean canTurn(int a,int m,int n)
+    {
+        int tmp=0x8000;
+        for(int i=0;i<4;i++)
+        {
+            for(int j=0;j<4;j++)
+            {
+                if((a&tmp)!=0)
+                {
+                    if(data[m][n]==1)
+                    {
+                        return false;
+                    }
+                }
+                n++;
+                tmp>>=1;
+            }
+            m++;
+            n-=4;
+        }
+        //遍历完了，可以
+        return true;
     }
 
     @Override
